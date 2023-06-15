@@ -1,0 +1,80 @@
+# Machine admin #
+
+- name: Configuration de la machine "admin"
+  hosts: admin
+  become: true
+
+# Machine mysql #
+
+- name: Gestion de la base de données MySQL sur la machine "mysql"
+  hosts: mysql
+  become: true
+  vars:
+    db_name: db_test
+    db_user: vagrant
+    db_password: vagrant
+    mysql_root_password: vagrant
+
+  # tâches à éxécuter :
+
+  tasks:
+      - name: Installer le serveur MySQL
+        apt:
+            name: mysql-server
+            state: present
+
+      - name: Installer python3-pip
+        apt:
+            name: python3-pip
+            state: present
+
+      - name: Installer le module python3-mysqldb
+        apt:
+            name: python3-mysqldb
+            state: present
+
+      - name: Créer la base de données
+        mysql_db:
+            name: "{{ db_name }}"
+            state: present
+            login_user: root
+            login_password: "{{ mysql_root_password }}"
+
+      - name: Créer l'utilisateur MySQL
+        mysql_user:
+            name: "{{ db_user }}"
+            password: "{{ db_password }}"
+            priv: "{{ db_name }}.*:ALL"
+            state: present
+            login_user: root
+            login_password: "{{ mysql_root_password }}"
+
+      - name: Sélectionner la base de données
+        mysql_db:
+            name: "{{ db_name }}"
+            state: present
+            login_user: "{{ db_user }}"
+            login_password: "{{ db_password }}"
+
+      - name: Créer la table 'users'
+        mysql_query:
+            login_user: "{{ db_user }}"
+            login_password: "{{ db_password }}"
+            query: >
+              USE {{ db_name }};
+              CREATE TABLE users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nom VARCHAR(50),
+                prenom VARCHAR(50),
+                entreprise VARCHAR(100)
+              )
+
+      - name: Insérer des données de test d  ans la table 'users'
+        mysql_query:
+            login_user: "{{ db_user }}"
+            login_password: "{{ db_password }}"
+            query: >
+              INSERT INTO db_test.users (nom, prenom, entreprise)
+              VALUES ('Doe', 'John', 'Acme Inc.'),
+                     ('Smith', 'Jane', 'XYZ Corp.'),
+                     ('Thomas', 'Louis', 'Ford Inc.')
